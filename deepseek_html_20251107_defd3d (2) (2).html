@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Пост — Liquid Glass Wide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #0d0a2e 0%, #352ee8 45%, #7a57ff 100%);
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --blur: 18px;
+      --radius: 24px;
+      --offsetY: 10px;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, sans-serif;
+      color: white;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+
+    .posts-container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .post-container {
+      width: 100%;
+      padding: 20px 24px;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.04)),
+        var(--glass-bg);
+      backdrop-filter: blur(var(--blur)) saturate(160%);
+      -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+      border: 1px solid var(--glass-border);
+      box-shadow:
+        inset 0 -8px 20px rgba(0,0,0,0.25),
+        0 10px 35px rgba(0,0,0,0.45);
+      transform: translateY(var(--offsetY));
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .post-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .post-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 12px;
+      border: 2px solid rgba(255,255,255,0.4);
+      box-shadow: 0 0 8px rgba(255,255,255,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .post-user {
+      flex-grow: 1;
+    }
+
+    .post-username {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 3px;
+      color: #fff;
+    }
+
+    .post-date {
+      font-size: 13px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .post-tag {
+      background: rgba(255,255,255,0.15);
+      color: #00ffae;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+
+    .post-image {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .post-text {
+      font-size: 14px;
+      color: rgba(255,255,255,0.9);
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .post-tags {
+      margin-top: 10px;
+    }
+
+    .post-tags-item {
+      display: inline-block;
+      background: rgba(255,255,255,0.1);
+      color: #00b7ff;
+      font-size: 12px;
+      border-radius: 8px;
+      padding: 4px 8px;
+      margin-right: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(6px);
+    }
+
+    .post-footer {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+      margin-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      padding-top: 10px;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .post-footer div {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    .post-footer svg {
+      width: 18px;
+      height: 18px;
+      fill: rgba(255,255,255,0.6);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* Стили для попапа комментариев */
+    .comments-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      display: none;
+      backdrop-filter: blur(5px);
+    }
+
+    .comments-popup {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1a1a2e;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      z-index: 1001;
+      display: none;
+      flex-direction: column;
+      max-height: 85vh;
+      box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+    }
+
+    .comments-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .comments-title {
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .close-comments {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .comments-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      max-height: calc(85vh - 150px);
+    }
+
+    .comment-item {
+      display: flex;
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .comment-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 10px;
+    }
+
+    .comment-content {
+      flex: 1;
+    }
+
+    .comment-author {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    .comment-text {
+      font-size: 14px;
+      color: rgba(255,255,255,0.9);
+      line-height: 1.4;
+    }
+
+    .comment-input-container {
+      padding: 15px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      background: #1a1a2e;
+    }
+
+    .comment-input-placeholder {
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 24px;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .comment-input-form {
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .comment-input {
+      flex: 1;
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 24px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .send-comment {
+      background: #7a57ff;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .send-comment svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="posts-container" id="postsContainer">
+    <div class="loading">Загрузка постов...</div>
+  </div>
+
+  <!-- Попап комментариев -->
+  <div class="comments-overlay" id="commentsOverlay"></div>
+  <div class="comments-popup" id="commentsPopup">
+    <div class="comments-header">
+      <div class="comments-title">Комментарии</div>
+      <button class="close-comments" id="closeComments">✕</button>
+    </div>
+    <div class="comments-list" id="commentsList">
+      <div class="loading">Загрузка комментариев...</div>
+    </div>
+    <div class="comment-input-container">
+      <div class="comment-input-placeholder" id="commentPlaceholder">Добавить комментарий...</div>
+      <div class="comment-input-form" id="commentForm">
+        <input type="text" class="comment-input" id="commentInput" placeholder="Введите комментарий...">
+        <button class="send-comment" id="sendComment">
+          <svg viewBox="0 0 24 24">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const token = "wLQHYMSz2QYSR589VqZbzMGTyC5-4p0Gvtebgw7-";
+    const postsTableUrl = "https://nocodb.puzzlebot.top/api/v2/tables/minlpj3cnsmvm4t/records";
+    const commentsTableUrl = "https://nocodb.puzzlebot.top/api/v2/tables/m77v802i3qk5h1v/records";
+
+    // Получаем данные пользователя из Telegram WebApp
+    let userData = {
+      avatar: "{{USER_AVATAR_URL}}",
+      name: "{{FIRST_AND_LAST_NAME_TEXT}}"
+    };
+
+    // Инициализация Telegram WebApp
+    function initTelegramWebApp() {
+      if (window.Telegram && Telegram.WebApp) {
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Получаем данные пользователя
+        const user = tg.initDataUnsafe.user;
+        if (user) {
+          userData.avatar = user.photo_url || "{{USER_AVATAR_URL}}";
+          userData.name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || "{{FIRST_AND_LAST_NAME_TEXT}}";
+        }
+      }
+    }
+
+    // Функция для загрузки данных из API
+    async function fetchPosts() {
+      try {
+        const response = await fetch(postsTableUrl, {
+          headers: {
+            'xc-token': token
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки данных');
+        }
+        
+        const data = await response.json();
+        return data.list || [];
+      } catch (error) {
+        console.error('Ошибка:', error);
+        return [];
+      }
+    }
+
+    // Функция для загрузки всех комментариев
+    async function fetchAllComments() {
+      try {
+        const response = await fetch(commentsTableUrl, {
+          headers: {
+            'xc-token': token
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки комментариев');
+        }
+        
+        const data = await response.json();
+        return data.list || [];
+      } catch (error) {
+        console.error('Ошибка:', error);
+        return [];
+      }
+    }
+
+    // Функция для создания HTML поста
+    function createPostElement(postData) {
+      // Проверяем наличие аватара
+      let avatarHtml = '';
+      if (postData.avatar_user) {
+        avatarHtml = `<img class="post-avatar" src="${postData.avatar_user}" alt="Аватар">`;
+      } else {
+        const firstLetter = postData.Username_avtor ? postData.Username_avtor.charAt(0).toUpperCase() : '?';
+        avatarHtml = `<div class="post-avatar">${firstLetter}</div>`;
+      }
+
+      // Проверяем наличие изображения публикации
+      const imageHtml = postData.foto_publikkatsii ? 
+        `<img class="post-image" src="${postData.foto_publikkatsii}" alt="Изображение поста">` : '';
+
+      // Проверяем наличие описания
+      const descriptionHtml = postData.opisanie_publikkatsii ? 
+        `<div class="post-text">${postData.opisanie_publikkatsii}</div>` : '';
+
+      // Проверяем, нужно ли отображать лайки и комментарии
+      const showActions = postData.razrab && postData.razrab.toString().includes('6254951831');
+      
+      // HTML для лайков и комментариев
+      const actionsHtml = showActions ? `
+        <div class="post-footer">
+          <div class="post-likes">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            <span>0</span>
+          </div>
+          <div class="post-comments" data-post-id="${postData.id}">
+            <svg viewBox="0 0 24 24">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+            <span>0</span>
+          </div>
+        </div>
+      ` : '';
+
+      return `
+        <div class="post-container">
+          <div class="post-header">
+            ${avatarHtml}
+            <div class="post-user">
+              <div class="post-username">${postData.Username_avtor || 'Неизвестный автор'}</div>
+              <div class="post-date">Разработчик Kaar+</div>
+            </div>
+            <div class="post-tag">Пост</div>
+          </div>
+
+          ${imageHtml}
+
+          ${descriptionHtml}
+
+          <div class="post-tags">
+            <span class="post-tags-item">#Kaarplus</span>
+            <span class="post-tags-item">#Автопомощь</span>
+          </div>
+
+          ${actionsHtml}
+        </div>
+      `;
+    }
+
+    // Функция для отображения постов
+    async function displayPosts() {
+      const postsContainer = document.getElementById('postsContainer');
+      const posts = await fetchPosts();
+      
+      if (posts.length === 0) {
+        postsContainer.innerHTML = '<div class="loading">Посты не найдены</div>';
+        return;
+      }
+      
+      postsContainer.innerHTML = posts.map(post => createPostElement(post)).join('');
+      
+      // Добавляем обработчики для комментариев
+      document.querySelectorAll('.post-comments').forEach(button => {
+        button.addEventListener('click', function() {
+          const postId = this.getAttribute('data-post-id');
+          openCommentsPopup(postId);
+        });
+      });
+    }
+
+    // Функция для открытия попапа комментариев
+    async function openCommentsPopup(postId) {
+      const overlay = document.getElementById('commentsOverlay');
+      const popup = document.getElementById('commentsPopup');
+      const commentsList = document.getElementById('commentsList');
+      
+      // Показываем попап
+      overlay.style.display = 'block';
+      popup.style.display = 'flex';
+      
+      // Загружаем все комментарии
+      commentsList.innerHTML = '<div class="loading">Загрузка комментариев...</div>';
+      const allComments = await fetchAllComments();
+      
+      // Фильтруем комментарии по postId (если нужно) или показываем все
+      // Если комментарии не привязаны к постам, показываем все
+      const comments = allComments; // Можно заменить на фильтрацию по postId
+      
+      if (comments.length === 0) {
+        commentsList.innerHTML = '<div class="loading">Комментариев пока нет</div>';
+      } else {
+        commentsList.innerHTML = comments.map(comment => `
+          <div class="comment-item">
+            <img class="comment-avatar" src="${comment.user_avatar || 'https://via.placeholder.com/36'}" alt="Аватар">
+            <div class="comment-content">
+              <div class="comment-author">${comment.first_name || 'Пользователь'}</div>
+              <div class="comment-text">${comment.komm || ''}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      // Сохраняем ID поста для отправки комментария
+      popup.setAttribute('data-current-post', postId);
+    }
+
+    // Функция для закрытия попапа комментариев
+    function closeCommentsPopup() {
+      const overlay = document.getElementById('commentsOverlay');
+      const popup = document.getElementById('commentsPopup');
+      
+      overlay.style.display = 'none';
+      popup.style.display = 'none';
+      
+      // Сбрасываем форму ввода
+      document.getElementById('commentPlaceholder').style.display = 'block';
+      document.getElementById('commentForm').style.display = 'none';
+      document.getElementById('commentInput').value = '';
+    }
+
+    // Функция для отправки комментария
+    async function sendComment() {
+      const commentInput = document.getElementById('commentInput');
+      const commentText = commentInput.value.trim();
+      const postId = document.getElementById('commentsPopup').getAttribute('data-current-post');
+      
+      if (!commentText) return;
+      
+      try {
+        const response = await fetch(commentsTableUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'xc-token': token
+          },
+          body: JSON.stringify({
+            user_avatar: userData.avatar,
+            first_name: userData.name,
+            komm: commentText
+          })
+        });
+        
+        if (response.ok) {
+          // Очищаем поле ввода
+          commentInput.value = '';
+          
+          // Обновляем список комментариев
+          const commentsList = document.getElementById('commentsList');
+          commentsList.innerHTML = '<div class="loading">Обновление комментариев...</div>';
+          
+          const allComments = await fetchAllComments();
+          const comments = allComments; // Можно заменить на фильтрацию по postId
+          
+          if (comments.length === 0) {
+            commentsList.innerHTML = '<div class="loading">Комментариев пока нет</div>';
+          } else {
+            commentsList.innerHTML = comments.map(comment => `
+              <div class="comment-item">
+                <img class="comment-avatar" src="${comment.user_avatar || 'https://via.placeholder.com/36'}" alt="Аватар">
+                <div class="comment-content">
+                  <div class="comment-author">${comment.first_name || 'Пользователь'}</div>
+                  <div class="comment-text">${comment.komm || ''}</div>
+                </div>
+              </div>
+            `).join('');
+          }
+        } else {
+          throw new Error('Ошибка отправки комментария');
+        }
+      } catch (error) {
+        console.error('Ошибка:', error);
+        alert('Не удалось отправить комментарий');
+      }
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+      initTelegramWebApp();
+      displayPosts();
+      
+      // Обработчики для попапа комментариев
+      document.getElementById('closeComments').addEventListener('click', closeCommentsPopup);
+      document.getElementById('commentsOverlay').addEventListener('click', closeCommentsPopup);
+      
+      // Обработчики для формы комментариев
+      document.getElementById('commentPlaceholder').addEventListener('click', function() {
+        this.style.display = 'none';
+        document.getElementById('commentForm').style.display = 'flex';
+        document.getElementById('commentInput').focus();
+      });
+      
+      document.getElementById('sendComment').addEventListener('click', sendComment);
+      
+      document.getElementById('commentInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          sendComment();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
